@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: innovatech-cluster
-  ECR_REGISTRY: 429809373122.dkr.ecr.us-east-1.amazonaws.com # ⬅️ Tu cuenta real de AWS Academy
+  ECR_REGISTRY: 429809373122.dkr.ecr.us-east-1.amazonaws.com # Tu cuenta real de AWS Academy
   REPO_BACK_DESPACHOS: back-despachos
   REPO_BACK_VENTAS: back-ventas
   REPO_FRONT_DESPACHO: front-despacho
@@ -29,7 +29,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Obligatorio para entornos estudiantiles
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ env.AWS_REGION }}
 
     # 3. Autenticarse en Amazon ECR
@@ -37,7 +37,7 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    # 4. Construir las imágenes Docker y subirlas a ECR usando las rutas exactas de tu nuevo código
+    # 4. Construir las imágenes Docker y subirlas a ECR usando las rutas exactas de tu código
     - name: Build, Tag, and Push Images to Amazon ECR
       run: |
         # BACKEND DESPACHOS
@@ -57,16 +57,16 @@ jobs:
       run: |
         aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
-    # 6. Desplegar los manifiestos en orden secuencial en Kubernetes
+    # 6. Desplegar los manifiestos en orden secuencial en Kubernetes (Corregido)
     - name: Deploy to Amazon EKS Cluster
       run: |
-        kubectl apply -f k8s/0-mysql.yaml --ignore-not-found=true # Despliega MySQL interno si lo conservas
+        kubectl apply -f k8s/0-mysql.yaml
         kubectl apply -f k8s/1-secrets.yaml
         kubectl apply -f k8s/2-backend.yaml
         kubectl apply -f k8s/3-frontend.yaml
         kubectl apply -f k8s/4-hpa.yaml
         
-        # Forzar actualización inmediata descargando la versión recién compilada
+        # Forzar actualización inmediata descargando la versión recién de ECR
         kubectl rollout restart deployment/back-despachos
         kubectl rollout restart deployment/back-ventas
         kubectl rollout restart deployment/front-despacho
