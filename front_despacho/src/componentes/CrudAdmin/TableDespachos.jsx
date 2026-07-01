@@ -78,7 +78,7 @@ export const TableDespachos = () => {
                     <td>
                       <button
                         onClick={() => handleAbrirModal(despacho)}
-                        className="py-1 bg-orange-200 px-8 rounded-xl shadow-md hover:bg-orange-300/70 transition-all duration-300 "
+                        className="py-1.5 bg-indigo-600 text-white font-medium px-8 rounded-xl shadow-md hover:bg-indigo-700 transition-all duration-300 transform hover:-translate-y-0.5"
                       >
                         Cerrar despacho
                       </button>
