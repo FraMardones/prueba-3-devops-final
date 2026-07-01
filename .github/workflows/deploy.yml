@@ -1,0 +1,72 @@
+name: Innovatech Chile CI/CD Pipeline - Final Code
+
+on:
+  push:
+    branches:
+      - main  # Se dispara automáticamente al hacer push a la rama principal
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: innovatech-cluster
+  ECR_REGISTRY: 429809373122.dkr.ecr.us-east-1.amazonaws.com # ⬅️ Tu cuenta real de AWS Academy
+  REPO_BACK_DESPACHOS: back-despachos
+  REPO_BACK_VENTAS: back-ventas
+  REPO_FRONT_DESPACHO: front-despacho
+
+jobs:
+  build-and-deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Clonar el repositorio actual
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Configurar las credenciales temporales de AWS Academy usando los Secrets de GitHub
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Obligatorio para entornos estudiantiles
+        aws-region: ${{ env.AWS_REGION }}
+
+    # 3. Autenticarse en Amazon ECR
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    # 4. Construir las imágenes Docker y subirlas a ECR usando las rutas exactas de tu nuevo código
+    - name: Build, Tag, and Push Images to Amazon ECR
+      run: |
+        # BACKEND DESPACHOS
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.REPO_BACK_DESPACHOS }}:latest ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.REPO_BACK_DESPACHOS }}:latest
+        
+        # BACKEND VENTAS
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.REPO_BACK_VENTAS }}:latest ./back-Ventas_SpringBoot/Springboot-API-REST
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.REPO_BACK_VENTAS }}:latest
+        
+        # FRONTEND DESPACHO
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.REPO_FRONT_DESPACHO }}:latest ./front_despacho
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.REPO_FRONT_DESPACHO }}:latest
+
+    # 5. Configurar kubectl para conectarse a tu clúster EKS activo
+    - name: Setup Kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+    # 6. Desplegar los manifiestos en orden secuencial en Kubernetes
+    - name: Deploy to Amazon EKS Cluster
+      run: |
+        kubectl apply -f k8s/0-mysql.yaml --ignore-not-found=true # Despliega MySQL interno si lo conservas
+        kubectl apply -f k8s/1-secrets.yaml
+        kubectl apply -f k8s/2-backend.yaml
+        kubectl apply -f k8s/3-frontend.yaml
+        kubectl apply -f k8s/4-hpa.yaml
+        
+        # Forzar actualización inmediata descargando la versión recién compilada
+        kubectl rollout restart deployment/back-despachos
+        kubectl rollout restart deployment/back-ventas
+        kubectl rollout restart deployment/front-despacho
