@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: front-despacho
-        image: 586435708287.dkr.ecr.us-east-1.amazonaws.com/front-despacho:latest
+        image: 429809373122.dkr.ecr.us-east-1.amazonaws.com/front-despacho:latest # ⬅️ Corregido con tu cuenta real
         ports:
         - containerPort: 80
         resources:
